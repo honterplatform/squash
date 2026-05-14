@@ -285,7 +285,8 @@ section {
 /* ============ SEGMENTED CONTROL ============ */
 .segmented {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -1326,7 +1327,7 @@ function validateState(s) {
     players: Array.isArray(s.players) && s.players.length >= 3 && s.players.length <= 8
       ? s.players.map(String)
       : DEFAULT_STATE().players,
-    rounds: s.rounds === 2 ? 2 : 1,
+    rounds: (typeof s.rounds === 'number' && s.rounds >= 1 && s.rounds <= 10) ? Math.floor(s.rounds) : 1,
     currentGame: typeof s.currentGame === 'number' && s.currentGame >= 0 ? s.currentGame : 0,
     currentScores: Array.isArray(s.currentScores) && s.currentScores.length === 2
       ? [Math.max(0, +s.currentScores[0] || 0), Math.max(0, +s.currentScores[1] || 0)]
@@ -1606,7 +1607,21 @@ function singleRoundRobin(n) {
 
 function generateSchedule(n, rounds) {
   const single = singleRoundRobin(n);
-  return rounds === 2 ? [...single, ...single] : single;
+  const r = Math.max(1, Math.floor(rounds || 1));
+  if (r === 1) return single;
+  const out = [];
+  for (let i = 0; i < r; i++) out.push(...single.map(p => p.slice()));
+  return out;
+}
+
+function longRoundsFor(n) {
+  if (n <= 1) return 1;
+  return Math.max(1, Math.ceil(10 / (n - 1)));
+}
+
+function roundsLabel(rounds) {
+  const labels = { 1: 'Single', 2: 'Double', 3: 'Triple', 4: 'Quadruple', 5: 'Quintuple' };
+  return labels[rounds] || (rounds + '×');
 }
 
 // ============================================================
@@ -1791,7 +1806,7 @@ function renderHome() {
   if (hasInProgress || hasComplete) {
     const sched = generateSchedule(state.players.length, state.rounds);
     const total = sched.length;
-    const formatLabel = state.rounds === 2 ? 'Double' : 'Single';
+    const formatLabel = roundsLabel(state.rounds);
     if (hasInProgress) {
       const [a, b] = sched[state.currentGame];
       resumeCard = `
@@ -1915,6 +1930,16 @@ function renderSetup() {
   const n = state.players.length;
   const singleGames = n * (n - 1) / 2;
   const doubleGames = singleGames * 2;
+  const longRounds = longRoundsFor(n);
+  const longGames = singleGames * longRounds;
+  const showLong = longRounds > 2;
+  if (state.rounds > 2) {
+    const snapped = showLong ? longRounds : 2;
+    if (state.rounds !== snapped) {
+      state.rounds = snapped;
+      persist();
+    }
+  }
   const canStart = state.players.every(p => p.trim().length > 0);
 
   $app().innerHTML = `
@@ -1972,6 +1997,11 @@ function renderSetup() {
         <button class="seg ${state.rounds === 2 ? 'active' : ''}" data-rounds="2" role="tab" aria-selected="${state.rounds === 2}">
           <span>Double</span><span class="seg-meta mono">${doubleGames}G</span>
         </button>
+        ${showLong ? `
+        <button class="seg ${state.rounds === longRounds ? 'active' : ''}" data-rounds="${longRounds}" role="tab" aria-selected="${state.rounds === longRounds}">
+          <span>Long</span><span class="seg-meta mono">${longGames}G</span>
+        </button>
+        ` : ''}
       </div>
     </section>
 
@@ -1987,7 +2017,7 @@ function renderHistoryCard(h) {
     + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   const isTied = h.winners.length > 1;
   const diffStr = (h.winnerStats.diff > 0 ? '+' : '') + h.winnerStats.diff;
-  const formatLabel = h.rounds === 2 ? 'Double' : 'Single';
+  const formatLabel = roundsLabel(h.rounds);
   return `
     <div class="history-card">
       <div class="history-head">
