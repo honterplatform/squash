@@ -322,6 +322,37 @@ section {
 }
 .seg.active .seg-meta { color: var(--text-dim); }
 
+/* ============ FORMAT INFO ============ */
+.format-info {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 4px 14px;
+  display: grid;
+  gap: 0;
+}
+.format-info .fi-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.format-info .fi-row:last-child { border-bottom: none; }
+.format-info .fi-key {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.format-info .fi-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  font-feature-settings: "tnum";
+}
+
 /* ============ PRIMARY BUTTON ============ */
 .primary {
   height: 64px;
@@ -1928,18 +1959,13 @@ function backToHome() {
 // ----- Setup -----
 function renderSetup() {
   const n = state.players.length;
-  const singleGames = n * (n - 1) / 2;
-  const doubleGames = singleGames * 2;
-  const longRounds = longRoundsFor(n);
-  const longGames = singleGames * longRounds;
-  const showLong = longRounds > 2;
-  if (state.rounds > 2) {
-    const snapped = showLong ? longRounds : 2;
-    if (state.rounds !== snapped) {
-      state.rounds = snapped;
-      persist();
-    }
+  const targetRounds = longRoundsFor(n);
+  if (state.rounds !== targetRounds) {
+    state.rounds = targetRounds;
+    persist();
   }
+  const totalGames = (n * (n - 1) / 2) * targetRounds;
+  const perPlayer = (n - 1) * targetRounds;
   const canStart = state.players.every(p => p.trim().length > 0);
 
   $app().innerHTML = `
@@ -1985,25 +2011,10 @@ function renderSetup() {
       </div>
     </section>
 
-    <section>
-      <div class="eyebrow">
-        <span class="label">Format</span>
-        <span class="hr"></span>
-      </div>
-      <div class="segmented" role="tablist">
-        <button class="seg ${state.rounds === 1 ? 'active' : ''}" data-rounds="1" role="tab" aria-selected="${state.rounds === 1}">
-          <span>Single</span><span class="seg-meta mono">${singleGames}G</span>
-        </button>
-        <button class="seg ${state.rounds === 2 ? 'active' : ''}" data-rounds="2" role="tab" aria-selected="${state.rounds === 2}">
-          <span>Double</span><span class="seg-meta mono">${doubleGames}G</span>
-        </button>
-        ${showLong ? `
-        <button class="seg ${state.rounds === longRounds ? 'active' : ''}" data-rounds="${longRounds}" role="tab" aria-selected="${state.rounds === longRounds}">
-          <span>Long</span><span class="seg-meta mono">${longGames}G</span>
-        </button>
-        ` : ''}
-      </div>
-    </section>
+    <div class="format-info">
+      <div class="fi-row"><span class="fi-key mono">Total games</span><span class="fi-val mono">${totalGames}</span></div>
+      <div class="fi-row"><span class="fi-key mono">Per player</span><span class="fi-val mono">${perPlayer}</span></div>
+    </div>
 
     <button class="primary" id="start-btn" ${canStart ? '' : 'disabled'}>Start Tournament</button>
   `;
@@ -2078,16 +2089,6 @@ function bindSetupEvents() {
     const inputs = $app().querySelectorAll('input[data-idx]');
     const last = inputs[inputs.length - 1];
     if (last) last.focus();
-  });
-
-  $app().querySelectorAll('[data-rounds]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const r = +e.currentTarget.dataset.rounds;
-      if (state.rounds === r) return;
-      state.rounds = r;
-      persist();
-      render();
-    });
   });
 
   const startBtn = document.getElementById('start-btn');
