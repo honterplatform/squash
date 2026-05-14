@@ -1349,6 +1349,7 @@ const DEFAULT_STATE = () => ({
   archived: false,
   history: [],
   people: [],
+  setupPhotos: {},
 });
 
 function validateState(s) {
@@ -1367,6 +1368,7 @@ function validateState(s) {
     archived: !!s.archived,
     history: Array.isArray(s.history) ? s.history : [],
     people: Array.isArray(s.people) ? s.people.filter(p => p && typeof p.name === 'string') : [],
+    setupPhotos: (s.setupPhotos && typeof s.setupPhotos === 'object') ? s.setupPhotos : {},
   };
 }
 
@@ -1571,8 +1573,9 @@ function updateRowAvatar(idx, name) {
   const avatar = document.querySelector(`label.avatar[data-avatar-idx="${idx}"]`);
   if (!avatar) return;
   const fileInput = avatar.querySelector('input[type="file"]');
+  const staged = state.setupPhotos && state.setupPhotos[idx];
   const person = findPersonByName(name);
-  const photo = person ? person.photo : null;
+  const photo = staged || (person ? person.photo : null);
   avatar.innerHTML = '';
   if (photo) {
     const img = document.createElement('img');
@@ -1821,6 +1824,7 @@ function startTournamentFromSelection() {
   state.currentScores = [0, 0];
   state.results = [];
   state.archived = false;
+  state.setupPhotos = {};
   state.phase = 'setup';
   peopleSelection = new Set();
   persist();
@@ -1942,6 +1946,7 @@ function goToSetup() {
   state.currentScores = [0, 0];
   state.results = [];
   state.archived = false;
+  state.setupPhotos = {};
   persist();
   render();
 }
@@ -1983,8 +1988,9 @@ function renderSetup() {
       </div>
       <div class="players-list">
         ${state.players.map((name, i) => {
+          const staged = state.setupPhotos && state.setupPhotos[i];
           const person = findPersonByName(name);
-          const photo = person ? person.photo : null;
+          const photo = staged || (person ? person.photo : null);
           const avatarInner = photo
             ? `<img src="${photo}" alt="" />`
             : `<span class="${name.trim() ? 'initials' : 'plus'}">${name.trim() ? escapeHtml(getInitials(name)) : '+'}</span>`;
@@ -2063,6 +2069,12 @@ function bindSetupEvents() {
     input.addEventListener('input', e => {
       const idx = +e.target.dataset.idx;
       state.players[idx] = e.target.value;
+      const trimmed = e.target.value.trim();
+      const staged = state.setupPhotos && state.setupPhotos[idx];
+      if (trimmed && staged) {
+        upsertPerson(trimmed, staged);
+        delete state.setupPhotos[idx];
+      }
       persist();
       const btn = document.getElementById('start-btn');
       if (btn) btn.disabled = !state.players.every(p => p.trim());
@@ -2075,6 +2087,15 @@ function bindSetupEvents() {
       const idx = +e.currentTarget.dataset.remove;
       if (state.players.length <= 3) return;
       state.players = state.players.filter((_, i) => i !== idx);
+      if (state.setupPhotos) {
+        const shifted = {};
+        for (const k of Object.keys(state.setupPhotos)) {
+          const ki = +k;
+          if (ki < idx) shifted[ki] = state.setupPhotos[k];
+          else if (ki > idx) shifted[ki - 1] = state.setupPhotos[k];
+        }
+        state.setupPhotos = shifted;
+      }
       persist();
       render();
     });
@@ -2096,7 +2117,11 @@ function bindSetupEvents() {
     if (!state.players.every(p => p.trim())) return;
     state.phase = 'tournament';
     state.players = state.players.map(p => p.trim());
-    state.players.forEach(name => upsertPerson(name));
+    state.players.forEach((name, i) => {
+      const staged = state.setupPhotos && state.setupPhotos[i];
+      upsertPerson(name, staged || undefined);
+    });
+    state.setupPhotos = {};
     state.currentGame = 0;
     state.currentScores = [0, 0];
     state.results = [];
@@ -2111,15 +2136,18 @@ function bindSetupEvents() {
       const file = e.currentTarget.files && e.currentTarget.files[0];
       e.currentTarget.value = '';
       if (!file) return;
-      const name = (state.players[idx] || '').trim();
-      if (!name) {
-        const nameInput = $app().querySelector(`input[data-idx="${idx}"]`);
-        if (nameInput) nameInput.focus();
-        return;
-      }
       try {
         const dataUrl = await processImageFile(file);
-        upsertPerson(name, dataUrl);
+        const name = (state.players[idx] || '').trim();
+        if (name) {
+          upsertPerson(name, dataUrl);
+          if (state.setupPhotos) delete state.setupPhotos[idx];
+        } else {
+          state.setupPhotos = state.setupPhotos || {};
+          state.setupPhotos[idx] = dataUrl;
+          const nameInput = $app().querySelector(`input[data-idx="${idx}"]`);
+          if (nameInput) nameInput.focus();
+        }
         persist();
         render();
       } catch (err) {
