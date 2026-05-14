@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B0D10">
+<title>Squash Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0B0D10;
+  --surface: #14171C;
+  --surface-2: #1B1F26;
+  --line: #262B33;
+  --line-soft: #1F2329;
+  --text: #F2F3F5;
+  --text-dim: #8A8F99;
+  --text-mute: #555A65;
+  --accent: #C6FF3D;
+  --accent-ink: #0B0D10;
+  --win: #7FE7B0;
+  --loss: #FF6B6B;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  min-height: 100%;
+  background: var(--bg);
+}
+
+body {
+  color: var(--text);
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  padding: 16px 16px max(20px, env(safe-area-inset-bottom)) 16px;
+}
+
+button, input {
+  font: inherit;
+  color: inherit;
+}
+
+button { -webkit-tap-highlight-color: transparent; }
+
+input:focus { outline: none; }
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  display: grid;
+  gap: 22px;
+}
+
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.tnum { font-feature-settings: "tnum"; }
+
+/* ============ HEADER ============ */
+.top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px 14px 2px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.brand {
+  font-family: 'Geist', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.brand-sub {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--text-mute);
+  font-weight: 500;
+}
+.progress {
+  margin-left: auto;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-weight: 500;
+}
+.reset-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 15px;
+  font-family: 'JetBrains Mono', monospace;
+  display: grid;
+  place-items: center;
+  transition: background 150ms ease, color 150ms ease, transform 80ms ease;
+}
+.reset-btn:hover { background: var(--surface-2); color: var(--text); }
+.reset-btn:active { transform: scale(0.94); }
+
+/* ============ LABELS / EYEBROW ============ */
+.label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+section {
+  display: grid;
+  gap: 14px;
+}
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.eyebrow .hr {
+  flex: 1;
+  height: 1px;
+  background: var(--line-soft);
+}
+.eyebrow .meta {
+  font-size: 11px;
+  color: var(--text-mute);
+  letter-spacing: 0.1em;
+  font-weight: 500;
+}
+
+/* ============ SETUP: PLAYERS ============ */
+.players-list {
+  display: grid;
+  gap: 8px;
+}
+.player-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px 10px 6px 16px;
+  transition: border-color 150ms ease;
+}
+.player-row:focus-within {
+  border-color: var(--text-mute);
+}
+.tag {
+  font-size: 11px;
+  color: var(--text-mute);
+  letter-spacing: 0.1em;
+  font-weight: 500;
+  min-width: 22px;
+}
+.player-row input {
+  background: transparent;
+  border: none;
+  height: 52px;
+  font-size: 15px;
+  color: var(--text);
+  width: 100%;
+  font-family: 'Geist', sans-serif;
+}
+.player-row input::placeholder { color: var(--text-mute); }
+.remove {
+  width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-mute);
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  transition: color 150ms ease, background 150ms ease;
+}
+.remove:hover {
+  color: var(--loss);
+  background: rgba(255, 107, 107, 0.08);
+}
+.add-player {
+  height: 52px;
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--text-dim);
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: 'Geist', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+.add-player:hover {
+  border-color: var(--text-mute);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ============ SEGMENTED CONTROL ============ */
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
+}
+.seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 56px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 9px;
+  font-family: 'Geist', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 150ms ease, color 150ms ease;
+}
+.seg:hover:not(.active) { color: var(--text); }
+.seg.active {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--line);
+}
+.seg-meta {
+  font-size: 11px;
+  color: var(--text-mute);
+  letter-spacing: 0.12em;
+}
+.seg.active .seg-meta { color: var(--text-dim); }
+
+/* ============ PRIMARY BUTTON ============ */
+.primary {
+  height: 64px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: 'Geist', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 80ms ease, background 150ms ease, opacity 150ms ease, color 150ms ease;
+  width: 100%;
+  letter-spacing: 0.01em;
+}
+.primary:disabled {
+  background: var(--surface-2);
+  color: var(--text-mute);
+  cursor: not-allowed;
+}
+.primary:hover:not(:disabled) { opacity: 0.92; }
+.primary:active:not(:disabled) { transform: scale(0.985); }
+.primary.flash-error {
+  animation: flashErr 0.5s cubic-bezier(.36,.07,.19,.97);
+}
+@keyframes flashErr {
+  0%, 100% { background: var(--accent); color: var(--accent-ink); transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { background: var(--loss); color: #fff; transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { background: var(--loss); color: #fff; transform: translateX(4px); }
+}
+
+/* ============ NOW PLAYING ============ */
+.now-playing {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--accent);
+  border-radius: 14px;
+  padding: 20px 18px 20px;
+  display: grid;
+  gap: 24px;
+  overflow: hidden;
+}
+.now-playing::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 140px;
+  background: linear-gradient(180deg, rgba(198, 255, 61, 0.06), transparent 75%);
+  pointer-events: none;
+}
+.np-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+.np-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.np-label .dot {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse 1.6s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(198, 255, 61, 0.5);
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+.np-game {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--text-dim);
+}
+
+.players-grid {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+}
+.divider {
+  background: var(--line-soft);
+  width: 1px;
+  align-self: stretch;
+}
+.player-col {
+  display: grid;
+  gap: 14px;
+  text-align: center;
+  min-width: 0;
+}
+.pname {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.005em;
+}
+.pscore {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 68px;
+  font-feature-settings: "tnum";
+  line-height: 1;
+  color: var(--text);
+  letter-spacing: -0.03em;
+}
+.score-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.score-btn {
+  height: 56px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 22px;
+  cursor: pointer;
+  transition: transform 80ms ease, background 150ms ease, border-color 150ms ease;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  display: grid;
+  place-items: center;
+}
+.score-btn:hover:not(:disabled) {
+  background: var(--line);
+  border-color: var(--text-mute);
+}
+.score-btn:active:not(:disabled) { transform: scale(0.94); }
+.score-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+/* ============ UP NEXT ============ */
+.up-next {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+}
+.un-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.un-names {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+.un-names .vs {
+  color: var(--text-mute);
+  margin: 0 5px;
+  font-size: 11px;
+}
+.un-game {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--text-mute);
+  font-weight: 500;
+}
+
+/* ============ STANDINGS ============ */
+.standings {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.standings thead th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  font-weight: 500;
+  text-align: right;
+  padding: 4px 6px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.standings thead th:nth-child(1),
+.standings thead th:nth-child(2) {
+  text-align: left;
+}
+.standings tbody td {
+  padding: 13px 6px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: right;
+  vertical-align: middle;
+}
+.standings tbody tr:last-child td { border-bottom: none; }
+.standings tbody td:nth-child(1) {
+  text-align: left;
+  color: var(--text-mute);
+  width: 22px;
+  font-size: 12px;
+}
+.standings tbody td:nth-child(2) { text-align: left; }
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: var(--text);
+}
+.ldot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(198, 255, 61, 0.5);
+  flex-shrink: 0;
+}
+.standings .pts {
+  font-weight: 700;
+  font-size: 17px;
+  font-feature-settings: "tnum";
+  color: var(--text);
+}
+.standings .pts-leader { color: var(--accent); }
+.standings .diff {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-feature-settings: "tnum";
+}
+.standings .diff.win { color: var(--win); }
+.standings .diff.loss { color: var(--loss); }
+.standings .wl {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-feature-settings: "tnum";
+}
+
+/* ============ COMPLETED ============ */
+.completed {
+  list-style: none;
+  display: grid;
+  gap: 0;
+}
+.completed-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  padding: 11px 6px;
+  align-items: center;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.completed-row:last-child { border-bottom: none; }
+.completed-row .g {
+  color: var(--text-mute);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  font-weight: 500;
+}
+.completed-row .names {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.completed-row .names .winner { color: var(--text); font-weight: 600; }
+.completed-row .names .loser { color: var(--text-mute); font-weight: 400; }
+.completed-row .names .vs {
+  color: var(--text-mute);
+  margin: 0 6px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.completed-row .cs {
+  font-feature-settings: "tnum";
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ============ TOURNAMENT COMPLETE ============ */
+.complete-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--accent);
+  border-radius: 14px;
+  padding: 32px 20px 28px;
+  overflow: hidden;
+  display: grid;
+  gap: 14px;
+  text-align: center;
+}
+.complete-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 160px;
+  background: linear-gradient(180deg, rgba(198, 255, 61, 0.08), transparent 75%);
+  pointer-events: none;
+}
+.complete-top {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+.complete-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.star {
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1;
+}
+.winner-name {
+  font-family: 'Geist', sans-serif;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  position: relative;
+  z-index: 1;
+  word-break: break-word;
+}
+.winner-tied-names {
+  font-family: 'Geist', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.25;
+  position: relative;
+  z-index: 1;
+  letter-spacing: -0.005em;
+  word-break: break-word;
+}
+.winner-stats {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  position: relative;
+  z-index: 1;
+  font-weight: 500;
+}
+
+/* ============ MODAL ============ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
+  animation: fade 150ms ease;
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px;
+  max-width: 380px;
+  width: 100%;
+  display: grid;
+  gap: 16px;
+  animation: rise 180ms cubic-bezier(.16,1,.3,1);
+}
+@keyframes rise {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.modal-body {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.modal-btn {
+  height: 52px;
+  border-radius: 12px;
+  font-family: 'Geist', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  transition: background 150ms ease, transform 80ms ease;
+}
+.modal-btn:hover { background: var(--line); }
+.modal-btn:active { transform: scale(0.97); }
+.modal-btn.destructive {
+  background: var(--loss);
+  border-color: var(--loss);
+  color: #fff;
+  font-weight: 600;
+}
+.modal-btn.destructive:hover { background: #ff5555; border-color: #ff5555; }
+
+/* ============ RESPONSIVE ============ */
+@media (min-width: 600px) {
+  body { padding: 36px 20px max(36px, env(safe-area-inset-bottom)) 20px; }
+  .app { gap: 26px; }
+  .pscore { font-size: 76px; }
+  .winner-name { font-size: 48px; }
+}
+
+@media (max-width: 360px) {
+  .pscore { font-size: 56px; }
+  .pname { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+<div id="modal-root"></div>
+<script>
+'use strict';
+
+// ============================================================
+// STATE
+// ============================================================
+const STATE_KEY = 'squash-tracker-v1';
+const DEFAULT_STATE = () => ({
+  phase: 'setup',
+  players: ['', '', '', ''],
+  rounds: 1,
+  currentGame: 0,
+  currentScores: [0, 0],
+  results: [],
+});
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STATE_KEY);
+    if (!raw) return DEFAULT_STATE();
+    const s = JSON.parse(raw);
+    if (!s || (s.phase !== 'setup' && s.phase !== 'tournament')) return DEFAULT_STATE();
+    return {
+      phase: s.phase,
+      players: Array.isArray(s.players) && s.players.length >= 3 && s.players.length <= 8
+        ? s.players.map(String)
+        : DEFAULT_STATE().players,
+      rounds: s.rounds === 2 ? 2 : 1,
+      currentGame: typeof s.currentGame === 'number' && s.currentGame >= 0 ? s.currentGame : 0,
+      currentScores: Array.isArray(s.currentScores) && s.currentScores.length === 2
+        ? [Math.max(0, +s.currentScores[0] || 0), Math.max(0, +s.currentScores[1] || 0)]
+        : [0, 0],
+      results: Array.isArray(s.results) ? s.results : [],
+    };
+  } catch (e) {
+    return DEFAULT_STATE();
+  }
+}
+
+let state = loadState();
+
+function persist() {
+  try { localStorage.setItem(STATE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+// ============================================================
+// SCHEDULE — greedy: minimize overlap with previous game,
+// tie-break by total games played so far for the pair.
+// For n=4 this produces: [0,1],[2,3],[0,2],[1,3],[0,3],[1,2]
+// ============================================================
+function allPairs(n) {
+  const r = [];
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) r.push([i, j]);
+  return r;
+}
+
+function singleRoundRobin(n) {
+  const all = allPairs(n);
+  if (all.length === 0) return [];
+  const used = new Set();
+  const games = new Array(n).fill(0);
+  const key = p => p[0] + '-' + p[1];
+
+  let current = [0, 1];
+  const out = [current];
+  used.add(key(current));
+  games[0]++; games[1]++;
+
+  while (used.size < all.length) {
+    const remaining = all.filter(p => !used.has(key(p)));
+    // Stable sort: equal items preserve insertion order from allPairs().
+    remaining.sort((a, b) => {
+      const ov = q =>
+        (q[0] === current[0] || q[0] === current[1] ? 1 : 0) +
+        (q[1] === current[0] || q[1] === current[1] ? 1 : 0);
+      const oa = ov(a), ob = ov(b);
+      if (oa !== ob) return oa - ob;
+      const ga = games[a[0]] + games[a[1]];
+      const gb = games[b[0]] + games[b[1]];
+      return ga - gb;
+    });
+    current = remaining[0];
+    out.push(current);
+    used.add(key(current));
+    games[current[0]]++; games[current[1]]++;
+  }
+  return out;
+}
+
+function generateSchedule(n, rounds) {
+  const single = singleRoundRobin(n);
+  return rounds === 2 ? [...single, ...single] : single;
+}
+
+// ============================================================
+// STANDINGS
+// ============================================================
+function computeStandings(players, results) {
+  const stats = players.map((name, i) => ({
+    index: i, name, points: 0, diff: 0, wins: 0, losses: 0,
+  }));
+  for (const r of results) {
+    const a = stats[r.p1], b = stats[r.p2];
+    a.points += r.s1;
+    b.points += r.s2;
+    a.diff += r.s1 - r.s2;
+    b.diff += r.s2 - r.s1;
+    if (r.s1 > r.s2) { a.wins++; b.losses++; }
+    else if (r.s2 > r.s1) { b.wins++; a.losses++; }
+  }
+  return [...stats].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.diff !== a.diff) return b.diff - a.diff;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    return a.index - b.index;
+  });
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+const $app = () => document.getElementById('app');
+
+function render() {
+  if (state.phase === 'setup') renderSetup();
+  else renderTournament();
+}
+
+// ----- Setup -----
+function renderSetup() {
+  const n = state.players.length;
+  const singleGames = n * (n - 1) / 2;
+  const doubleGames = singleGames * 2;
+  const canStart = state.players.every(p => p.trim().length > 0);
+
+  $app().innerHTML = `
+    <header class="top">
+      <span class="brand">SQUASH</span>
+      <span class="brand-sub mono">TOURNAMENT</span>
+    </header>
+
+    <section>
+      <div class="eyebrow">
+        <span class="label">Players</span>
+        <span class="hr"></span>
+        <span class="meta mono">${n} / 8</span>
+      </div>
+      <div class="players-list">
+        ${state.players.map((name, i) => `
+          <div class="player-row">
+            <span class="tag mono">P${i + 1}</span>
+            <input type="text" value="${escapeHtml(name)}" placeholder="Player name"
+              data-idx="${i}" autocomplete="off" autocapitalize="words" spellcheck="false" />
+            ${n > 3 ? `<button class="remove" data-remove="${i}" aria-label="Remove player ${i + 1}">×</button>` : ''}
+          </div>
+        `).join('')}
+        ${n < 8 ? `<button class="add-player" id="add-player">+ Add player</button>` : ''}
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow">
+        <span class="label">Format</span>
+        <span class="hr"></span>
+      </div>
+      <div class="segmented" role="tablist">
+        <button class="seg ${state.rounds === 1 ? 'active' : ''}" data-rounds="1" role="tab" aria-selected="${state.rounds === 1}">
+          <span>Single</span><span class="seg-meta mono">${singleGames}G</span>
+        </button>
+        <button class="seg ${state.rounds === 2 ? 'active' : ''}" data-rounds="2" role="tab" aria-selected="${state.rounds === 2}">
+          <span>Double</span><span class="seg-meta mono">${doubleGames}G</span>
+        </button>
+      </div>
+    </section>
+
+    <button class="primary" id="start-btn" ${canStart ? '' : 'disabled'}>Start Tournament</button>
+  `;
+
+  bindSetupEvents();
+}
+
+function bindSetupEvents() {
+  $app().querySelectorAll('input[data-idx]').forEach(input => {
+    input.addEventListener('input', e => {
+      const idx = +e.target.dataset.idx;
+      state.players[idx] = e.target.value;
+      persist();
+      const btn = document.getElementById('start-btn');
+      if (btn) btn.disabled = !state.players.every(p => p.trim());
+    });
+  });
+
+  $app().querySelectorAll('[data-remove]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = +e.currentTarget.dataset.remove;
+      if (state.players.length <= 3) return;
+      state.players = state.players.filter((_, i) => i !== idx);
+      persist();
+      render();
+    });
+  });
+
+  const addBtn = document.getElementById('add-player');
+  if (addBtn) addBtn.addEventListener('click', () => {
+    if (state.players.length >= 8) return;
+    state.players.push('');
+    persist();
+    render();
+    const inputs = $app().querySelectorAll('input[data-idx]');
+    const last = inputs[inputs.length - 1];
+    if (last) last.focus();
+  });
+
+  $app().querySelectorAll('[data-rounds]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const r = +e.currentTarget.dataset.rounds;
+      if (state.rounds === r) return;
+      state.rounds = r;
+      persist();
+      render();
+    });
+  });
+
+  const startBtn = document.getElementById('start-btn');
+  startBtn.addEventListener('click', () => {
+    if (!state.players.every(p => p.trim())) return;
+    state.phase = 'tournament';
+    state.players = state.players.map(p => p.trim());
+    state.currentGame = 0;
+    state.currentScores = [0, 0];
+    state.results = [];
+    persist();
+    render();
+  });
+}
+
+// ----- Tournament -----
+function renderTournament() {
+  const schedule = generateSchedule(state.players.length, state.rounds);
+  const total = schedule.length;
+  const cg = state.currentGame;
+  const isComplete = cg >= total;
+  const standings = computeStandings(state.players, state.results);
+  const progressNum = isComplete ? total : cg + 1;
+
+  $app().innerHTML = `
+    <header class="top">
+      <span class="brand">SQUASH</span>
+      <span class="brand-sub mono">TOURNAMENT</span>
+      <span class="progress mono">${progressNum} / ${total}</span>
+      <button class="reset-btn" id="reset-btn" aria-label="Reset tournament" title="Reset">↺</button>
+    </header>
+
+    ${isComplete ? renderComplete(standings) : renderNowPlaying(schedule, cg)}
+    ${!isComplete && cg + 1 < total ? renderUpNext(schedule, cg + 1) : ''}
+
+    <section>
+      <div class="eyebrow">
+        <span class="label">Standings</span>
+        <span class="hr"></span>
+      </div>
+      ${renderStandings(standings)}
+    </section>
+
+    ${state.results.length > 0 ? `
+      <section>
+        <div class="eyebrow">
+          <span class="label">Completed</span>
+          <span class="hr"></span>
+          <span class="meta mono">${state.results.length}</span>
+        </div>
+        ${renderCompleted()}
+      </section>
+    ` : ''}
+  `;
+
+  bindTournamentEvents();
+}
+
+function renderNowPlaying(schedule, idx) {
+  const [a, b] = schedule[idx];
+  const [s1, s2] = state.currentScores;
+  return `
+    <div class="now-playing">
+      <div class="np-top">
+        <span class="np-label"><span class="dot"></span>Now Playing</span>
+        <span class="np-game">GAME ${pad2(idx + 1)}</span>
+      </div>
+      <div class="players-grid">
+        <div class="player-col">
+          <div class="pname">${escapeHtml(state.players[a])}</div>
+          <div class="pscore tnum">${s1}</div>
+          <div class="score-controls">
+            <button class="score-btn" data-score="0" data-delta="-1" ${s1 === 0 ? 'disabled' : ''} aria-label="Decrease score">−</button>
+            <button class="score-btn" data-score="0" data-delta="1" aria-label="Increase score">+</button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="player-col">
+          <div class="pname">${escapeHtml(state.players[b])}</div>
+          <div class="pscore tnum">${s2}</div>
+          <div class="score-controls">
+            <button class="score-btn" data-score="1" data-delta="-1" ${s2 === 0 ? 'disabled' : ''} aria-label="Decrease score">−</button>
+            <button class="score-btn" data-score="1" data-delta="1" aria-label="Increase score">+</button>
+          </div>
+        </div>
+      </div>
+      <button class="primary" id="finish-btn">Finish Match</button>
+    </div>
+  `;
+}
+
+function renderUpNext(schedule, idx) {
+  const [a, b] = schedule[idx];
+  return `
+    <div class="up-next">
+      <span class="un-label">Up Next</span>
+      <span class="un-names">${escapeHtml(state.players[a])}<span class="vs mono">vs</span>${escapeHtml(state.players[b])}</span>
+      <span class="un-game mono">GAME ${pad2(idx + 1)}</span>
+    </div>
+  `;
+}
+
+function renderStandings(standings) {
+  const top = standings[0];
+  const hasResults = state.results.length > 0;
+  const tiedIdxSet = new Set();
+  if (hasResults && top) {
+    standings.forEach(s => {
+      if (s.points === top.points && s.diff === top.diff && s.wins === top.wins) {
+        tiedIdxSet.add(s.index);
+      }
+    });
+  }
+
+  return `
+    <table class="standings">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Points</th>
+          <th>Diff</th>
+          <th>W–L</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${standings.map((s, i) => {
+          const isLeader = tiedIdxSet.has(s.index);
+          const diffStr = (s.diff > 0 ? '+' : '') + s.diff;
+          const diffCls = s.diff > 0 ? 'win' : (s.diff < 0 ? 'loss' : '');
+          return `
+            <tr>
+              <td class="mono">${i + 1}</td>
+              <td><div class="name-cell">${isLeader ? '<span class="ldot"></span>' : ''}<span>${escapeHtml(s.name)}</span></div></td>
+              <td class="pts mono tnum ${isLeader ? 'pts-leader' : ''}">${s.points}</td>
+              <td class="diff mono tnum ${diffCls}">${diffStr}</td>
+              <td class="wl mono tnum">${s.wins}–${s.losses}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderCompleted() {
+  return `
+    <ul class="completed">
+      ${state.results.map(r => {
+        const p1 = state.players[r.p1];
+        const p2 = state.players[r.p2];
+        const p1Win = r.s1 > r.s2;
+        const p2Win = r.s2 > r.s1;
+        return `
+          <li class="completed-row">
+            <span class="g mono">G${pad2(r.game + 1)}</span>
+            <span class="names">
+              <span class="${p1Win ? 'winner' : (p2Win ? 'loser' : 'winner')}">${escapeHtml(p1)}</span><span class="vs">vs</span><span class="${p2Win ? 'winner' : (p1Win ? 'loser' : 'winner')}">${escapeHtml(p2)}</span>
+            </span>
+            <span class="cs mono tnum">${r.s1}—${r.s2}</span>
+          </li>
+        `;
+      }).join('')}
+    </ul>
+  `;
+}
+
+function renderComplete(standings) {
+  const top = standings[0];
+  const tied = standings.filter(s =>
+    s.points === top.points && s.diff === top.diff && s.wins === top.wins
+  );
+  const isTied = tied.length > 1;
+  const diffStr = (top.diff > 0 ? '+' : '') + top.diff;
+
+  return `
+    <div class="complete-card">
+      <div class="complete-top">
+        <span class="star">★</span>
+        <span class="complete-label">${isTied ? 'Tied' : 'Tournament Complete'}</span>
+      </div>
+      ${isTied
+        ? `<div class="winner-tied-names">${tied.map(t => escapeHtml(t.name)).join('  ·  ')}</div>`
+        : `<div class="winner-name">${escapeHtml(top.name)}</div>`}
+      <div class="winner-stats mono">${top.points} points scored · ${top.wins}–${top.losses} record · ${diffStr} differential</div>
+    </div>
+  `;
+}
+
+function bindTournamentEvents() {
+  $app().querySelectorAll('.score-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const which = +e.currentTarget.dataset.score;
+      const delta = +e.currentTarget.dataset.delta;
+      const next = Math.max(0, state.currentScores[which] + delta);
+      if (next === state.currentScores[which]) return;
+      state.currentScores[which] = next;
+      persist();
+      render();
+    });
+  });
+
+  const finishBtn = document.getElementById('finish-btn');
+  if (finishBtn) finishBtn.addEventListener('click', finishMatch);
+
+  const resetBtn = document.getElementById('reset-btn');
+  if (resetBtn) resetBtn.addEventListener('click', showResetModal);
+}
+
+function finishMatch() {
+  const [s1, s2] = state.currentScores;
+  if (s1 === 0 && s2 === 0) {
+    const btn = document.getElementById('finish-btn');
+    if (btn) {
+      btn.classList.remove('flash-error');
+      void btn.offsetWidth;
+      btn.classList.add('flash-error');
+      setTimeout(() => btn.classList.remove('flash-error'), 600);
+    }
+    return;
+  }
+  const schedule = generateSchedule(state.players.length, state.rounds);
+  const [p1, p2] = schedule[state.currentGame];
+  state.results.push({ game: state.currentGame, p1, p2, s1, s2 });
+  state.currentGame += 1;
+  state.currentScores = [0, 0];
+  persist();
+  render();
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+let modalEscHandler = null;
+
+function closeModal() {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = '';
+  if (modalEscHandler) {
+    document.removeEventListener('keydown', modalEscHandler);
+    modalEscHandler = null;
+  }
+}
+
+function showResetModal() {
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <h2 class="modal-title" id="modal-title">Reset tournament?</h2>
+        <p class="modal-body">All players, scores, and completed games will be cleared.</p>
+        <div class="modal-actions">
+          <button class="modal-btn" id="modal-cancel">Cancel</button>
+          <button class="modal-btn destructive" id="modal-confirm">Reset</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  modalEscHandler = e => { if (e.key === 'Escape') closeModal(); };
+  document.addEventListener('keydown', modalEscHandler);
+
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('modal-confirm').addEventListener('click', () => {
+    closeModal();
+    resetAll();
+  });
+  document.getElementById('modal-backdrop').addEventListener('click', e => {
+    if (e.target.id === 'modal-backdrop') closeModal();
+  });
+}
+
+function resetAll() {
+  state = DEFAULT_STATE();
+  persist();
+  render();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+render();
+</script>
+</body>
+</html>
